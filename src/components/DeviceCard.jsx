@@ -66,11 +66,11 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
   };
 
   return (
-    <div className="mb-6 p-6 rounded-[28px] bg-white/70 dark:bg-black/40 border border-slate-200/50 dark:border-white/10 shadow-sm backdrop-blur-xl relative select-none transition-all duration-300 hover:shadow-md">
+    <div className="mb-5 p-4 sm:p-6 rounded-[22px] sm:rounded-[28px] bg-white/70 dark:bg-black/40 border border-slate-200/50 dark:border-white/10 shadow-sm backdrop-blur-xl relative select-none transition-all duration-300 hover:shadow-md">
       
       {/* Device Header */}
-      <div className="mb-5 flex items-center justify-between gap-3 text-left">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-left">
+        <div className="flex items-center gap-2.5 min-w-[160px] flex-1">
           <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-indigo-500 rounded-2xl flex items-center justify-center shadow-md shadow-cyan-500/10 text-white shrink-0">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
@@ -93,7 +93,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           <button
             onClick={() => exportToCSV(device)}
             className="p-2 text-slate-500 hover:text-cyan-500 dark:text-slate-400 dark:hover:text-cyan-400 bg-slate-50 dark:bg-black/30 border border-slate-200/40 dark:border-neutral-800/60 rounded-full transition-all duration-200 active:scale-90 hover:scale-105"

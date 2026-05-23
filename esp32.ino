@@ -22,7 +22,7 @@
 // =====================================
 #define MQ4_PIN 34
 #define MQ135_PIN 35
-#define DHT_PIN 4
+#define DHT_PIN 14
 #define DHT_TYPE DHT22
 
 DHT dht(DHT_PIN, DHT_TYPE);
@@ -192,6 +192,12 @@ void connectToWiFi() {
   Serial.println("\n[WiFi] Connecting to SSID: " + wifiSSID);
   Serial.flush();
 
+  // Disable auto-reconnect and disconnect any ongoing connection attempt
+  // to prevent the 'wifi:sta is connecting, cannot set config' error in newer core versions.
+  WiFi.setAutoReconnect(false);
+  WiFi.disconnect(false, false);
+  delay(100);
+
   // Begin WiFi connection
   WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
 
@@ -210,11 +216,15 @@ void connectToWiFi() {
     Serial.println(WiFi.localIP());
     wifiConnected = true;
     
+    // Enable auto-reconnect once we have successfully connected
+    WiFi.setAutoReconnect(true);
+    
     // Always fetch user ID from Supabase on successful connection
     fetchUserIdFromSupabase();
   } else {
     Serial.println("\n[WiFi] Connection FAILED (Timeout reached).");
     wifiConnected = false;
+    WiFi.setAutoReconnect(false);
   }
 
   updateWifiStatus();
@@ -426,7 +436,7 @@ void setup() {
   // Initialize STA mode WiFi with a small safety delay
   delay(150);
   WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
+  WiFi.setAutoReconnect(false); // Disabled by default on boot; connectToWiFi() will manage it
 
   // Load Saved WiFi Config from Flash
   preferences.begin("wifi", true);
@@ -452,14 +462,14 @@ void setup() {
 // MAIN EVENT LOOP
 // =====================================
 void loop() {
-  // Handle provisioning state connection
-  if (shouldConnectWifi) {
+  // Handle provisioning state connection (only when Bluetooth is NOT connected)
+  if (shouldConnectWifi && !deviceConnected) {
     connectToWiFi();
   }
 
-  // Periodic WiFi-to-Supabase Data Push
+  // Periodic WiFi-to-Supabase Data Push (only when Bluetooth is NOT connected)
   unsigned long currentMillis = millis();
-  if (WiFi.status() == WL_CONNECTED && (currentMillis - lastWifiReportTime >= wifiReportInterval)) {
+  if (!deviceConnected && WiFi.status() == WL_CONNECTED && (currentMillis - lastWifiReportTime >= wifiReportInterval)) {
     lastWifiReportTime = currentMillis;
     sendDataToSupabase();
   }
@@ -491,16 +501,50 @@ void loop() {
 
   // Handle BLE Client Disconnect
   if (!deviceConnected && oldDeviceConnected) {
-    delay(500);
-    pServer->startAdvertising(); // restart advertising to allow new connections
-    Serial.println("BLE Client Disconnected. Restarted Advertising.");
-    oldDeviceConnected = deviceConnected;
+    oldDeviceConnected = deviceConnected; // Mark state immediately to prevent re-entry
+    Serial.println("BLE Client Disconnected. Re-enabling Wi-Fi with protective transitions...");
+    
+    // 1. Give BLE stack a moment to clean up and free radio buffers
+    delay(200);
+    
+    // 2. Safely re-initialize Wi-Fi STA mode
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(false);
+    
+    // 3. Give Wi-Fi driver task time to initialize and allocate resources
+    delay(300);
+    
+    // 4. Safely restart BLE advertising
+    pServer->startAdvertising();
+    Serial.println("[BLE] Restarted Advertising.");
+    
+    // 5. Give BLE advertising task time to stabilize on the RF arbiter
+    delay(200);
+    
+    // 6. Schedule Wi-Fi auto-connect if credentials exist
+    if (wifiSSID.length() > 0) {
+      shouldConnectWifi = true;
+    }
   }
 
   // Handle BLE Client Connect
   if (deviceConnected && !oldDeviceConnected) {
-    oldDeviceConnected = deviceConnected;
-    Serial.println("BLE Connection Established.");
+    oldDeviceConnected = deviceConnected; // Mark state immediately to prevent re-entry
+    Serial.println("BLE Connection Established. Disabling Wi-Fi to prioritize BLE...");
+    
+    // 1. Disconnect Wi-Fi gracefully (without shutting off radio yet)
+    WiFi.disconnect(false, false);
+    
+    // 2. Allow any pending/active packets and TCP sessions to close gracefully
+    delay(200);
+    
+    // 3. Shut down the Wi-Fi radio completely
+    WiFi.mode(WIFI_OFF);
+    wifiConnected = false;
+    
+    // 4. Give the hardware RF arbiter time to adapt to single-radio mode
+    delay(200);
+    
     updateWifiStatus();
   }
 }

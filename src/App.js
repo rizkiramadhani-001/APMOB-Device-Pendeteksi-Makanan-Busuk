@@ -21,7 +21,7 @@ function Dashboard({ isDarkMode, setIsDarkMode }) {
         connectToNewDevice={connectToNewDevice} 
       />
 
-      <main className="flex-1 overflow-y-auto px-5 pt-6 pb-24">
+      <main className="flex-1 overflow-y-auto px-4 sm:px-5 pt-4 sm:pt-6 pb-24">
         {isLoadingDB ? (
           <div className="flex justify-center py-20 text-slate-500 dark:text-slate-400 font-medium text-xs">
             Loading saved devices...
