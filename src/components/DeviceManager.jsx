@@ -40,12 +40,12 @@ export default function DeviceManager({ devices, connectToNewDevice, connectToSa
 
         <button
           onClick={connectToNewDevice}
-          className="glow-btn bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white text-[10px] font-black py-2 px-3.5 rounded-full flex items-center justify-center gap-1.5 shrink-0 ml-auto"
+          className="glow-btn bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white text-[10px] font-black py-2 px-3 rounded-full flex items-center justify-center gap-1.5 shrink-0 ml-auto"
         >
           <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path>
           </svg>
-          <span>Pasangkan</span>
+          <span>Pasang</span>
         </button>
       </div>
 
@@ -106,7 +106,7 @@ export default function DeviceManager({ devices, connectToNewDevice, connectToSa
                         className="flex items-center gap-1.5 cursor-pointer group/name" 
                         title="Klik untuk mengubah nama"
                       >
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover/name:text-cyan-500 transition-colors truncate max-w-[140px]">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover/name:text-cyan-500 transition-colors truncate max-w-[90px] sm:max-w-[140px]">
                           {device.name}
                         </span>
                         <svg className="w-2.5 h-2.5 text-slate-400 dark:text-slate-500 opacity-0 group-hover/name:opacity-100 transition-opacity flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
