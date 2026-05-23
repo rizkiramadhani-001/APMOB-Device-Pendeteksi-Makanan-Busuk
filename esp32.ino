@@ -18,7 +18,7 @@
 #define WIFI_STATUS_CHARACTERISTIC_UUID "e2b0b2f3-8c79-4d24-ad4f-2a4b6f8e0c35"
 
 // =====================================
-// SENSOR PINS
+// SENSOR PINS ss
 // =====================================
 #define MQ4_PIN 34
 #define MQ135_PIN 35
