@@ -1,36 +1,45 @@
-#include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
-#include <DHT.h>
+#include <BLE2902.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <DHT.h>
 #include <Preferences.h>
+#include "esp_bt.h"
 
+// =====================================
+// UUID CONFIGURATION (MATCHES FRONTEND)
+// =====================================
 #define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define WIFI_CHARACTERISTIC_UUID "d1a9a1f2-7b68-4c13-9c3e-1f3a5e7d9b24"
 #define WIFI_STATUS_CHARACTERISTIC_UUID "e2b0b2f3-8c79-4d24-ad4f-2a4b6f8e0c35"
 
-// --- SENSOR PINS ---
-// Update these pins according to your ESP32 wiring!
-#define MQ4_PIN 32
-#define MQ135_PIN 33
+// =====================================
+// SENSOR PINS
+// =====================================
+#define MQ4_PIN 34
+#define MQ135_PIN 35
 #define DHT_PIN 4
 #define DHT_TYPE DHT22
 
 DHT dht(DHT_PIN, DHT_TYPE);
 Preferences preferences;
+WiFiClientSecure client; // Instantiated globally to completely eliminate heap fragmentation & SSL memory leaks
 
+// =====================================
+// GLOBAL VARIABLES
+// =====================================
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristic = NULL;
 BLECharacteristic *pWifiCharacteristic = NULL;
 BLECharacteristic *pWifiStatusCharacteristic = NULL;
+
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
-// Config state
 String wifiSSID = "";
 String wifiPassword = "";
 String userId = "";
@@ -39,13 +48,29 @@ String deviceId = "";
 bool wifiConnected = false;
 bool shouldConnectWifi = false;
 
-// Timer for WiFi data reporting
 unsigned long lastWifiReportTime = 0;
-const unsigned long wifiReportInterval = 10000; // Send data every 10 seconds via WiFi
+const unsigned long wifiReportInterval = 10000; // Sending interval (10 seconds)
 
-// Update WiFi status on the BLE characteristic
+// =====================================
+// SUPABASE REST API
+// =====================================
+String supabaseUrl = "https://hijdrgyysmurhahdavtu.supabase.co/rest/v1/sensor_history";
+
+// Supabase Service Role JWT Key (bypasses RLS to guarantee autonomous hardware inserts succeed)
+String supabaseKey =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpamRy"
+    "Z3l5c211cmhhaGRhdnR1Iiwicm9sZSI6InNlcnZp"
+    "Y2Vfcm9sZSIsImlhdCI6MTc3NTczMDQwMCwiZXhw"
+    "IjoyMDkxMzA2NDAwfQ.WdtSLpE3WCpt0md9eDtls"
+    "S0Xa3PPGCjqJ3yBfHGhpuM";
+
+// =====================================
+// WIFI STATUS BADGE NOTIFIER
+// =====================================
 void updateWifiStatus() {
   String status;
+
   if (WiFi.status() == WL_CONNECTED) {
     status = "CONNECTED:" + WiFi.localIP().toString() + ":" + wifiSSID;
     wifiConnected = true;
@@ -58,12 +83,17 @@ void updateWifiStatus() {
     status = "NOT_CONFIGURED";
     wifiConnected = false;
   }
-  pWifiStatusCharacteristic->setValue(status.c_str());
-  pWifiStatusCharacteristic->notify();
-  Serial.println("WiFi Status: " + status);
+
+  if (pWifiStatusCharacteristic != NULL) {
+    pWifiStatusCharacteristic->setValue(status.c_str());
+    pWifiStatusCharacteristic->notify();
+  }
+  Serial.println("WiFi Status BLE Sent: " + status);
 }
 
-// Helper function to split string by character
+// =====================================
+// UTILITY: STRING SPLITTER
+// =====================================
 String getValueAtIndex(String data, char separator, int index) {
   int found = 0;
   int strIndex[] = {0, -1};
@@ -79,19 +109,133 @@ String getValueAtIndex(String data, char separator, int index) {
   return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-// Callback for WiFi credential writes
+// =====================================
+// SUPABASE: FETCH USER ID
+// =====================================
+void fetchUserIdFromSupabase() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[Supabase] Cannot fetch user ID: WiFi not connected");
+    return;
+  }
+  if (deviceId.length() == 0) {
+    Serial.println("[Supabase] Cannot fetch user ID: Device ID is empty");
+    return;
+  }
+
+  Serial.println("[Supabase] Fetching registered user ID for Device ID: " + deviceId);
+  
+  HTTPClient http;
+  http.useHTTP10(true);
+  http.setTimeout(10000);
+
+  // Construct URL to select user_id for this device_id
+  String selectUrl = "https://hijdrgyysmurhahdavtu.supabase.co/rest/v1/registered_devices?device_id=eq." + deviceId + "&select=user_id";
+
+  bool ok = http.begin(client, selectUrl);
+  if (!ok) {
+    Serial.println("[Supabase] HTTP secure session initialization failed for fetch!");
+    return;
+  }
+
+  http.addHeader("apikey", supabaseKey);
+  http.addHeader("Authorization", "Bearer " + supabaseKey);
+
+  int httpCode = http.GET();
+  Serial.print("[Supabase] Fetch HTTP Code: ");
+  Serial.println(httpCode);
+
+  if (httpCode == 200) {
+    String response = http.getString();
+    Serial.println("[Supabase] Fetch Response: " + response);
+
+    // Response format: [{"user_id":"uuid-value-here"}]
+    int idx = response.indexOf("\"user_id\":\"");
+    if (idx != -1) {
+      String fetchedUserId = response.substring(idx + 11, idx + 11 + 36);
+      if (fetchedUserId.length() == 36) {
+        if (userId != fetchedUserId) {
+          userId = fetchedUserId;
+          Serial.println("[Supabase] User ID updated from Supabase: " + userId);
+          
+          // Persist the updated userId in preferences
+          preferences.begin("wifi", false);
+          preferences.putString("userId", userId);
+          preferences.end();
+          Serial.println("[Preferences] Saved updated user ID to flash storage.");
+        } else {
+          Serial.println("[Supabase] User ID is already up-to-date: " + userId);
+        }
+      } else {
+        Serial.println("[Supabase] Parse error: extracted UUID is invalid length: " + fetchedUserId);
+      }
+    } else {
+      Serial.println("[Supabase] Device not found in registered_devices table or no user_id associated.");
+    }
+  } else {
+    Serial.print("[Supabase] Fetch failed: ");
+    Serial.println(http.errorToString(httpCode));
+  }
+
+  http.end();
+  client.stop();
+}
+
+// =====================================
+// WIFI CONNECT
+// =====================================
+void connectToWiFi() {
+  if (wifiSSID.length() == 0) {
+    Serial.println("[WiFi] Connect aborted: SSID is empty");
+    return;
+  }
+
+  Serial.println("\n[WiFi] Connecting to SSID: " + wifiSSID);
+  Serial.flush();
+
+  // Begin WiFi connection
+  WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
+
+  int attempts = 0;
+  shouldConnectWifi = false;
+  
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n[WiFi] Connection SUCCESSFUL!");
+    Serial.print("[WiFi] Local IP: ");
+    Serial.println(WiFi.localIP());
+    wifiConnected = true;
+    
+    // Always fetch user ID from Supabase on successful connection
+    fetchUserIdFromSupabase();
+  } else {
+    Serial.println("\n[WiFi] Connection FAILED (Timeout reached).");
+    wifiConnected = false;
+  }
+
+  updateWifiStatus();
+}
+
+// =====================================
+// BLE WIFI CONFIGURATION CALLBACKS
+// =====================================
 class WifiCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) {
     String value = pCharacteristic->getValue().c_str();
-    Serial.println("Received BLE config: " + value);
+    Serial.println("Received WiFi Config BLE Stream:");
+    Serial.println(value);
 
-    // Expected format: "SSID:PASSWORD:USER_ID:DEVICE_ID"
+    // Expected format from React app: SSID:PASSWORD:USER_ID:DEVICE_ID
     wifiSSID = getValueAtIndex(value, ':', 0);
     wifiPassword = getValueAtIndex(value, ':', 1);
     userId = getValueAtIndex(value, ':', 2);
     deviceId = getValueAtIndex(value, ':', 3);
 
-    // Save to persistent storage
+    // Persist credentials in flash storage
     preferences.begin("wifi", false);
     preferences.putString("ssid", wifiSSID);
     preferences.putString("password", wifiPassword);
@@ -99,114 +243,192 @@ class WifiCallbacks : public BLECharacteristicCallbacks {
     preferences.putString("deviceId", deviceId);
     preferences.end();
 
-    Serial.println("Saved SSID: " + wifiSSID);
-    Serial.println("Saved Password: " + wifiPassword);
-    Serial.println("Saved UserID: " + userId);
-    Serial.println("Saved DeviceID: " + deviceId);
+    Serial.println("Saved credentials to Preferences:");
+    Serial.println("SSID: " + wifiSSID);
+    Serial.println("User ID: " + userId);
+    Serial.println("Device ID: " + deviceId);
 
     shouldConnectWifi = true;
     updateWifiStatus();
   }
 };
 
-// Callback to handle connection status
+// =====================================
+// BLE SERVER STATUS CALLBACKS
+// =====================================
 class MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer *pServer) { deviceConnected = true; };
-  void onDisconnect(BLEServer *pServer) { deviceConnected = false; }
+  void onConnect(BLEServer *pServer) {
+    deviceConnected = true;
+    Serial.println("BLE Client Connected");
+  }
+
+  void onDisconnect(BLEServer *pServer) {
+    deviceConnected = false;
+    Serial.println("BLE Client Disconnected");
+  }
 };
 
-void connectToWiFi() {
-  if (wifiSSID.length() == 0) return;
-
-  Serial.println("Connecting to WiFi: " + wifiSSID);
-  WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
-
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
-
-  shouldConnectWifi = false;
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected! IP: " + WiFi.localIP().toString());
-    wifiConnected = true;
-  } else {
-    Serial.println("\nWiFi connection failed.");
-    wifiConnected = false;
-  }
-
-  if (deviceConnected) {
-    updateWifiStatus();
-  }
-}
-
-// Function to send data directly to Supabase via WiFi HTTP POST
+// =====================================
+// SUPABASE HTTPS DATA POSTING
+// =====================================
 void sendDataToSupabase() {
-  if (WiFi.status() != WL_CONNECTED || userId.length() == 0 || deviceId.length() == 0) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Database Update Skipped: WiFi not connected");
     return;
   }
 
-  Serial.println("WiFi: Preparing to send data to Supabase...");
+  if (userId.length() == 0 || deviceId.length() == 0) {
+    Serial.println("Database Update Skipped: Missing registered UserID/DeviceID");
+    return;
+  }
 
-  WiFiClientSecure client;
-  client.setInsecure(); // Skip SSL certificate validation for simplicity
+  Serial.println("\n-------------------------------------");
+  Serial.println("PREPARING HTTPS TELEMETRY SEND...");
+  Serial.print("Free Heap Memory: ");
+  Serial.println(ESP.getFreeHeap());
+
+  // Reading Sensors
+  int mq4_value = analogRead(MQ4_PIN);
+  int mq135_value = analogRead(MQ135_PIN);
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature(); // Kept for BLE local display if needed
+
+  if (isnan(humidity)) {
+    humidity = 0;
+  }
+
+  // =====================================
+  // JSON PAYLOAD (MATCHES FRONTEND SCHEMA)
+  // =====================================
+  String jsonPayload = "{";
+  jsonPayload += "\"device_id\":\"" + deviceId + "\",";
+  jsonPayload += "\"user_id\":\"" + userId + "\",";
+  jsonPayload += "\"mq4\":" + String(mq4_value) + ",";
+  jsonPayload += "\"mq135\":" + String(mq135_value) + ",";
+  jsonPayload += "\"gas\":" + String(mq4_value) + ",";
+  jsonPayload += "\"humidity\":" + String(humidity, 1) + ",";
+  jsonPayload += "\"temperature\":" + String(mq135_value);
+  jsonPayload += "}";
+
+  Serial.println("Constructing JSON Payload:");
+  Serial.println(jsonPayload);
 
   HTTPClient http;
-  String url = "https://hijdrgyysmurhahdavtu.supabase.co/rest/v1/sensor_history";
+  http.useHTTP10(true);
+  http.setTimeout(15000);
+
+  Serial.println("Opening SSL socket session...");
+  bool ok = http.begin(client, supabaseUrl);
   
-  if (http.begin(client, url)) {
-    // Set Headers
-    http.addHeader("Content-Type", "application/json");
-    http.addHeader("apikey", "sb_publishable_H9IcbMhIp-_GZzK7U3GyLg_vsN74Uhx");
-    http.addHeader("Authorization", "Bearer sb_publishable_H9IcbMhIp-_GZzK7U3GyLg_vsN74Uhx");
-    http.addHeader("Prefer", "return=minimal");
-
-    // Read Sensors
-    int mq4_value = analogRead(MQ4_PIN);
-    int mq135_value = analogRead(MQ135_PIN);
-    float humidity = dht.readHumidity();
-    if (isnan(humidity)) {
-      humidity = 0.0;
-    }
-
-    // Build JSON Payload
-    String jsonPayload = "{\"device_id\":\"" + deviceId + "\","
-                         "\"user_id\":\"" + userId + "\","
-                         "\"gas\":" + String(mq4_value) + ","
-                         "\"temperature\":" + String(mq135_value) + ","
-                         "\"humidity\":" + String(humidity, 1) + "}";
-
-    Serial.println("WiFi sending payload: " + jsonPayload);
-
-    int httpCode = http.POST(jsonPayload);
-
-    if (httpCode > 0) {
-      Serial.printf("WiFi POST successful, response code: %d\n", httpCode);
-    } else {
-      Serial.printf("WiFi POST failed, error: %s\n", http.errorToString(httpCode).c_str());
-    }
-    http.end();
-  } else {
-    Serial.println("Unable to connect to Supabase REST endpoint.");
+  if (!ok) {
+    Serial.println("HTTP secure session initialization failed!");
+    return;
   }
+
+  // Add Request Headers
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", supabaseKey);
+  http.addHeader("Authorization", "Bearer " + supabaseKey);
+  http.addHeader("Prefer", "return=minimal"); // Request a zero-byte response to bypass dynamic heap buffer allocations
+
+  // Post Data
+  Serial.println("Sending HTTPS payload...");
+  int httpCode = http.POST(jsonPayload);
+
+  Serial.print("HTTP Response Code: ");
+  Serial.println(httpCode);
+
+  if (httpCode > 0) {
+    Serial.println("--- DB POST SUCCESS ---");
+  } else {
+    Serial.print("--- DB POST FAILED: ");
+    Serial.println(http.errorToString(httpCode));
+  }
+
+  http.end();
+  client.stop(); // Force-release secure SSL context memory buffers immediately
+  Serial.println("-------------------------------------\n");
 }
 
+// =====================================
+// INITIALIZATION
+// =====================================
 void setup() {
-  Serial.begin(115200);
-  Serial.println("Starting BLE Setup...");
+  // If the Bluetooth hardware controller is already running (e.g. after a CPU Software Reset),
+  // we must disable and de-initialize it first to sync the hardware with our clean C++ boot state.
+  if (esp_bt_controller_get_status() != ESP_BT_CONTROLLER_STATUS_IDLE) {
+    esp_bt_controller_disable();
+    esp_bt_controller_deinit();
+  }
 
-  // Initialize Sensors
+  // Reclaim RAM on cold boot by releasing Classic Bluetooth memory.
+  // We can only release memory if the controller is in IDLE status (not yet initialized).
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
+    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+  }
+
+  Serial.begin(115200);
+  delay(100); // Give serial subsystem a moment to stabilize
+  Serial.println("\n=== ESP32 HARDWARE DEVICE START ===");
+
+  client.setInsecure(); // Configure our global secure SSL client to bypass chain verification
+
+  // Init Sensors
   dht.begin();
   pinMode(MQ4_PIN, INPUT);
   pinMode(MQ135_PIN, INPUT);
 
-  // Set WiFi Auto-Reconnect for stability
+  // =====================================
+  // BLE SERVER INIT (INSTANT ACTIVATION)
+  // =====================================
+  // We initialize the Bluetooth server immediately so that pairing and
+  // dashboard scanning work the millisecond the device powers on!
+  BLEDevice::init("ESP32_GATT_Server");
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  BLEService *pService = pServer->createService(BLEUUID(SERVICE_UUID), 30);
+
+  // Sensor reading notification characteristic
+  pCharacteristic = pService->createCharacteristic(
+      CHARACTERISTIC_UUID,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY
+  );
+  pCharacteristic->addDescriptor(new BLE2902());
+
+  // WiFi configuration write characteristic
+  pWifiCharacteristic = pService->createCharacteristic(
+      WIFI_CHARACTERISTIC_UUID,
+      BLECharacteristic::PROPERTY_WRITE
+  );
+  pWifiCharacteristic->setCallbacks(new WifiCallbacks());
+
+  // WiFi connection status characteristic
+  pWifiStatusCharacteristic = pService->createCharacteristic(
+      WIFI_STATUS_CHARACTERISTIC_UUID,
+      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY
+  );
+  pWifiStatusCharacteristic->addDescriptor(new BLE2902());
+
+  pService->start();
+
+  // Start BLE Advertising
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(false);
+  pAdvertising->setMinPreferred(0x0);
+  BLEDevice::startAdvertising();
+  Serial.println("[BLE] GATT Server & Advertising successfully started!");
+
+  // =====================================
+  // WIFI CONFIGURATION & AUTO-CONNECT
+  // =====================================
+  // Initialize STA mode WiFi with a small safety delay
+  delay(150);
+  WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
 
-  // Load saved credentials
+  // Load Saved WiFi Config from Flash
   preferences.begin("wifi", true);
   wifiSSID = preferences.getString("ssid", "");
   wifiPassword = preferences.getString("password", "");
@@ -214,102 +436,71 @@ void setup() {
   deviceId = preferences.getString("deviceId", "");
   preferences.end();
 
-  // Auto-connect to saved WiFi
+  Serial.println("Loaded local configuration: ");
+  Serial.println("SSID: " + wifiSSID);
+  Serial.println("User ID: " + userId);
+  Serial.println("Device ID: " + deviceId);
+  Serial.flush(); // Force output transmission before starting connection sequence
+
+  // Attempt auto-connect if credentials exist
   if (wifiSSID.length() > 0) {
     connectToWiFi();
   }
-
-  // 1. Initialize BLE Device
-  BLEDevice::init("ESP32_GATT_Server");
-
-  // 2. Create BLE Server
-  pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
-
-  // 3. Create BLE Service
-  BLEService *pService = pServer->createService(BLEUUID(SERVICE_UUID), 30);
-
-  // 4. Create Sensor Data Characteristic (Read & Notify)
-  pCharacteristic = pService->createCharacteristic(
-      CHARACTERISTIC_UUID,
-      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
-  pCharacteristic->addDescriptor(new BLE2902());
-
-  // 5. Create WiFi Config Characteristic (Write)
-  pWifiCharacteristic = pService->createCharacteristic(
-      WIFI_CHARACTERISTIC_UUID,
-      BLECharacteristic::PROPERTY_WRITE);
-  pWifiCharacteristic->setCallbacks(new WifiCallbacks());
-
-  // 6. Create WiFi Status Characteristic (Read & Notify)
-  pWifiStatusCharacteristic = pService->createCharacteristic(
-      WIFI_STATUS_CHARACTERISTIC_UUID,
-      BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
-  pWifiStatusCharacteristic->addDescriptor(new BLE2902());
-
-  // 7. Start service
-  pService->start();
-
-  // 8. Start advertising
-  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(false);
-  pAdvertising->setMinPreferred(0x0);
-  BLEDevice::startAdvertising();
-
-  Serial.println("BLE Server is running and advertising!");
 }
 
+// =====================================
+// MAIN EVENT LOOP
+// =====================================
 void loop() {
-  // Handle WiFi connection request
+  // Handle provisioning state connection
   if (shouldConnectWifi) {
     connectToWiFi();
   }
 
-  // Periodically send data via WiFi if connected and configured
+  // Periodic WiFi-to-Supabase Data Push
   unsigned long currentMillis = millis();
   if (WiFi.status() == WL_CONNECTED && (currentMillis - lastWifiReportTime >= wifiReportInterval)) {
     lastWifiReportTime = currentMillis;
     sendDataToSupabase();
   }
 
+  // Local Bluetooth Data Stream (when connected)
+  // Uses a non-blocking millis() timer to prevent CPU freezes, allowing network cores to run smoothly.
+  static unsigned long lastBleReportTime = 0;
   if (deviceConnected) {
-    // Read data from real sensors
-    int mq4_value = analogRead(MQ4_PIN);
-    int mq135_value = analogRead(MQ135_PIN);
-    float humidity = dht.readHumidity();
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastBleReportTime >= 2000) { // 2-second stream interval
+      lastBleReportTime = currentMillis;
 
-    // Check if DHT read failed
-    if (isnan(humidity)) {
-      Serial.println("Failed to read from DHT sensor!");
-      humidity = 0.0;
+      int mq4_value = analogRead(MQ4_PIN);
+      int mq135_value = analogRead(MQ135_PIN);
+      float humidity = dht.readHumidity();
+
+      if (isnan(humidity)) {
+        humidity = 0;
+      }
+
+      // Format: mq4,mq135,humidity
+      String sensorData = String(mq4_value) + "," + String(mq135_value) + "," + String(humidity, 1);
+      pCharacteristic->setValue(sensorData.c_str());
+      pCharacteristic->notify();
+      
+      Serial.println("Local BLE Stream Sent: " + sensorData);
     }
-
-    // Format CSV: mq4,mq135,humidity
-    String sensorData = String(mq4_value) + "," + String(mq135_value) + "," + String(humidity, 1);
-
-    // Send data to the BLE client
-    pCharacteristic->setValue(sensorData.c_str());
-    pCharacteristic->notify();
-
-    Serial.print("BLE sent: ");
-    Serial.println(sensorData);
-
-    delay(2000); // Send data every 2 seconds
   }
 
-  // Handle disconnection (restart advertising)
+  // Handle BLE Client Disconnect
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);
-    pServer->startAdvertising();
-    Serial.println("Client disconnected. Restarting advertising...");
+    pServer->startAdvertising(); // restart advertising to allow new connections
+    Serial.println("BLE Client Disconnected. Restarted Advertising.");
     oldDeviceConnected = deviceConnected;
   }
 
-  // Handle new connection
+  // Handle BLE Client Connect
   if (deviceConnected && !oldDeviceConnected) {
     oldDeviceConnected = deviceConnected;
-    Serial.println("Device connected! Starting data transmission...");
-    updateWifiStatus(); // Send current WiFi status on connect
+    Serial.println("BLE Connection Established.");
+    updateWifiStatus();
   }
 }

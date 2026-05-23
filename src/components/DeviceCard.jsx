@@ -28,6 +28,32 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
 
   const wifiStatus = device.wifiStatus || { status: 'NOT_CONFIGURED', ip: '', ssid: '' };
 
+  const isActive = device.isConnected || 
+                   device.status === 'WiFi Active' || 
+                   device.status === 'Live Monitoring Active' || 
+                   device.status === 'Connected';
+
+  const getStatusBadgeStyles = () => {
+    const status = device.status?.toLowerCase() || '';
+    if (device.isConnected || status === 'wifi active' || status === 'live monitoring active' || status === 'connected') {
+      return {
+        bg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+        dot: 'bg-emerald-500 animate-pulse'
+      };
+    } else if (status.includes('connecting') || status.includes('getting') || status.includes('service')) {
+      return {
+        bg: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',
+        dot: 'bg-amber-500 animate-pulse'
+      };
+    } else {
+      return {
+        bg: 'bg-slate-500/10 border-slate-500/20 text-slate-600 dark:text-slate-400',
+        dot: 'bg-slate-400'
+      };
+    }
+  };
+  const badgeStyles = getStatusBadgeStyles();
+
   const handleSendWifi = async (e) => {
     e.preventDefault();
     if (!wifiSSID.trim()) return;
@@ -55,12 +81,8 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
               <span>{device.name}</span>
             </h2>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <div className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider flex items-center gap-1 border shrink-0 ${
-                device.isConnected 
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
-                  : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
-              }`}>
-                <div className={`w-1 h-1 rounded-full ${device.isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+              <div className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider flex items-center gap-1 border shrink-0 ${badgeStyles.bg}`}>
+                <div className={`w-1 h-1 rounded-full ${badgeStyles.dot}`}></div>
                 <span>{device.status}</span>
               </div>
               <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 truncate">
@@ -103,7 +125,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
       {/* Freshness Health Gauge Banner (Apple Fitness Glass style) */}
       <div className={`mb-5 rounded-[22px] border p-5 flex items-center justify-between gap-4 backdrop-blur-md transition-all duration-300 ${
         freshness.bg
-      } ${freshness.border} ${!device.isConnected && 'opacity-40 grayscale pointer-events-none'}`}>
+      } ${freshness.border} ${!isActive && 'opacity-75'}`}>
         
         {/* Diagnosis text block */}
         <div className="flex-1 text-left space-y-1.5">
@@ -261,7 +283,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
       )}
 
       {/* Sensor Dashboard Metrics Grid (Apple Health Style Widgets) */}
-      <div className={`flex flex-col gap-4 transition-all duration-300 ${!device.isConnected ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+      <div className={`flex flex-col gap-4 transition-all duration-300 ${!isActive ? 'opacity-90' : ''}`}>
         
         {/* Metric Row: MQ-4 Methane */}
         <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-5 hover:border-emerald-500/35 dark:hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-4 text-left cursor-pointer">

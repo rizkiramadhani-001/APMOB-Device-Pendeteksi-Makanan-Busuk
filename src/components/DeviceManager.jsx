@@ -61,67 +61,72 @@ export default function DeviceManager({ devices, connectToNewDevice, connectToSa
         </div>
       ) : (
         <div className="flex flex-col gap-2.5 relative z-10">
-          {devices.map((device) => (
-            <div 
-              key={device.id} 
-              className={`flex items-center justify-between p-3.5 rounded-2xl bg-slate-100/50 dark:bg-black/50 border transition-all duration-300 group/row active:scale-[0.99] ${
-                device.isConnected 
-                  ? 'border-emerald-500/30 dark:border-emerald-500/20 shadow-sm shadow-emerald-500/[0.02] bg-emerald-500/[0.015]' 
-                  : 'border-slate-200/50 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
-              }`}
-            >
-              {/* Left Side: Microchip Icon & Status Indicator */}
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                {/* iOS Solid Icon Squircle in Row */}
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 shrink-0 ${
-                  device.isConnected
-                    ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-emerald-500/10'
-                    : 'bg-slate-100 dark:bg-neutral-800 border border-slate-200/40 dark:border-neutral-700/50 text-slate-400 dark:text-slate-500'
-                }`}>
-                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                  </svg>
-                </div>
+          {devices.map((device) => {
+            const isActive = device.isConnected || 
+                             device.status === 'WiFi Active' || 
+                             device.status === 'Live Monitoring Active' || 
+                             device.status === 'Connected';
+            return (
+              <div 
+                key={device.id} 
+                className={`flex items-center justify-between p-3.5 rounded-2xl bg-slate-100/50 dark:bg-black/50 border transition-all duration-300 group/row active:scale-[0.99] ${
+                  isActive 
+                    ? 'border-emerald-500/30 dark:border-emerald-500/20 shadow-sm shadow-emerald-500/[0.02] bg-emerald-500/[0.015]' 
+                    : 'border-slate-200/50 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                }`}
+              >
+                {/* Left Side: Microchip Icon & Status Indicator */}
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {/* iOS Solid Icon Squircle in Row */}
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 shrink-0 ${
+                    isActive
+                      ? 'bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-emerald-500/10'
+                      : 'bg-slate-100 dark:bg-neutral-800 border border-slate-200/40 dark:border-neutral-700/50 text-slate-400 dark:text-slate-500'
+                  }`}>
+                    <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                  </div>
 
-                {/* Device Titles / Edit Form */}
-                <div className="text-left min-w-0 flex-1">
-                  {editingId === device.id ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onBlur={() => saveEdit(device.id)}
-                      onKeyDown={(e) => e.key === 'Enter' && saveEdit(device.id)}
-                      className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 border border-cyan-500 rounded-lg px-2 py-0.5 outline-none w-full"
-                    />
-                  ) : (
-                    <div 
-                      onClick={() => startEdit(device)} 
-                      className="flex items-center gap-1.5 cursor-pointer group/name" 
-                      title="Klik untuk mengubah nama"
-                    >
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover/name:text-cyan-500 transition-colors truncate max-w-[140px]">
-                        {device.name}
+                  {/* Device Titles / Edit Form */}
+                  <div className="text-left min-w-0 flex-1">
+                    {editingId === device.id ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onBlur={() => saveEdit(device.id)}
+                        onKeyDown={(e) => e.key === 'Enter' && saveEdit(device.id)}
+                        className="text-xs font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 border border-cyan-500 rounded-lg px-2 py-0.5 outline-none w-full"
+                      />
+                    ) : (
+                      <div 
+                        onClick={() => startEdit(device)} 
+                        className="flex items-center gap-1.5 cursor-pointer group/name" 
+                        title="Klik untuk mengubah nama"
+                      >
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover/name:text-cyan-500 transition-colors truncate max-w-[140px]">
+                          {device.name}
+                        </span>
+                        <svg className="w-2.5 h-2.5 text-slate-400 dark:text-slate-500 opacity-0 group-hover/name:opacity-100 transition-opacity flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        isActive 
+                          ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' 
+                          : 'bg-slate-400 dark:bg-slate-600'
+                      }`}></span>
+                      <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                        ID: {device.id.substring(0, 8)}
                       </span>
-                      <svg className="w-2.5 h-2.5 text-slate-400 dark:text-slate-500 opacity-0 group-hover/name:opacity-100 transition-opacity flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      device.isConnected 
-                        ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' 
-                        : 'bg-slate-400 dark:bg-slate-600'
-                    }`}></span>
-                    <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 truncate">
-                      ID: {device.id.substring(0, 8)}
-                    </span>
                   </div>
                 </div>
-              </div>
 
               {/* Right Side: Quick Action Buttons */}
               <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -154,7 +159,8 @@ export default function DeviceManager({ devices, connectToNewDevice, connectToSa
               </div>
 
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
     </section>

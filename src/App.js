@@ -36,9 +36,9 @@ function Dashboard({ isDarkMode, setIsDarkMode }) {
               removeDeviceUi={removeDeviceUi}
               renameDevice={renameDevice}
             />
-            {devices.some(d => d.isConnected) && (
+            {devices.length > 0 && (
               <div className="space-y-5">
-                {devices.filter(d => d.isConnected).map((device, index) => (
+                {devices.map((device, index) => (
                   <DeviceCard 
                     key={device.id}
                     device={device}

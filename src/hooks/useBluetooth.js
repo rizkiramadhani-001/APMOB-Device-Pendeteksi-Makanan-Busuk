@@ -48,16 +48,62 @@ export function useBluetooth(userId) {
       }
 
       if (loaded.length > 0) {
-        setDevices(loaded.map(d => ({
-          id: d.id,
-          name: d.name,
-          status: "Offline",
-          isConnected: false,
-          readValue: "--",
-          sensorData: { mq4: '--', mq135: '--', humidity: '--' },
-          history: [],
-          isReading: false
-        })));
+        const devicesWithData = await Promise.all(loaded.map(async (d) => {
+          let history = [];
+          let sensorData = { mq4: '--', mq135: '--', humidity: '--' };
+          let status = "Offline";
+
+          if (supabase) {
+            // Fetch last 25 readings for this device
+            const { data: histData, error: histError } = await supabase
+              .from('sensor_history')
+              .select('*')
+              .eq('device_id', d.id)
+              .order('created_at', { ascending: false })
+              .limit(25);
+
+            if (!histError && histData && histData.length > 0) {
+              // Since we retrieved ascending: false to get the latest, we reverse it to display chronological order in the chart
+              const sortedData = [...histData].reverse();
+              
+              history = sortedData.map(h => ({
+                time: h.created_at
+                  ? new Date(h.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                  : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                mq4: h.gas,
+                mq135: h.temperature,
+                humidity: h.humidity
+              }));
+
+              const latest = histData[0]; // first item is the most recent due to descending order
+              sensorData = {
+                mq4: latest.gas.toString(),
+                mq135: latest.temperature.toString(),
+                humidity: latest.humidity.toString()
+              };
+
+              // If the latest reading was within the last 2 minutes, set status to WiFi Active
+              const latestTime = new Date(latest.created_at).getTime();
+              const now = new Date().getTime();
+              if (now - latestTime < 120000) {
+                status = "WiFi Active";
+              }
+            }
+          }
+
+          return {
+            id: d.id,
+            name: d.name,
+            status,
+            isConnected: false,
+            readValue: sensorData.mq4 !== '--' ? `${sensorData.mq4},${sensorData.mq135},${sensorData.humidity}` : "--",
+            sensorData,
+            history,
+            isReading: false
+          };
+        }));
+
+        setDevices(devicesWithData);
       } else {
         setDevices([]);
       }
@@ -115,7 +161,7 @@ export function useBluetooth(userId) {
             };
           });
 
-          checkAlertsAndHistory(device_id, deviceExists.name, parsedSensorData);
+          checkAlertsAndHistory(device_id, deviceExists.name, parsedSensorData, false);
         }
       )
       .subscribe();
@@ -162,7 +208,7 @@ export function useBluetooth(userId) {
     }
   };
 
-  const checkAlertsAndHistory = (deviceId, deviceName, parsedData) => {
+  const checkAlertsAndHistory = (deviceId, deviceName, parsedData, shouldInsertToDB = true) => {
     const mq4Val = parseFloat(parsedData.mq4);
     const mq135Val = parseFloat(parsedData.mq135);
     const humVal = parseFloat(parsedData.humidity);
@@ -176,7 +222,7 @@ export function useBluetooth(userId) {
       executeNativePush(`mq135-${deviceId}`, '⚠️ Poor Air Quality', `Ammonia/Sulfide density is ${mq135Val} PPM, indicating spoilage.`, nativePushTimes);
     }
 
-    if (supabase && !isNaN(mq4Val) && !isNaN(mq135Val) && !isNaN(humVal)) {
+    if (shouldInsertToDB && supabase && !isNaN(mq4Val) && !isNaN(mq135Val) && !isNaN(humVal)) {
       supabase.from('sensor_history')
         .insert([{ device_id: deviceId, gas: mq4Val, humidity: humVal, temperature: mq135Val, user_id: userId }])
         .then(({ error }) => {
