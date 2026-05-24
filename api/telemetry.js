@@ -45,7 +45,8 @@ module.exports = async (req, res) => {
       };
 
       // Perform secure HTTPS Request to forward telemetry payload to Supabase
-      return new Promise((resolve) => {
+      // Perform secure HTTPS Request to forward telemetry payload to Supabase
+      await new Promise((resolve) => {
         const supabaseReq = https.request(options, (supabaseRes) => {
           let responseData = '';
           supabaseRes.on('data', d => responseData += d);
@@ -57,7 +58,7 @@ module.exports = async (req, res) => {
 
         supabaseReq.on('error', (error) => {
           console.error('[Supabase HTTPS] Forwarding Error:', error);
-          res.status(500).json({ error: error.message });
+          if (!res.headersSent) res.status(500).json({ error: error.message });
           resolve();
         });
 

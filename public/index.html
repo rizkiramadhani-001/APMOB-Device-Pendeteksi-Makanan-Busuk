@@ -19,9 +19,20 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     
     <title>safedish — Real-time Food Quality & Spoilage Monitor</title>
+    <script>
+  const beamsClient = new PusherPushNotifications.Client({
+    instanceId: '0664ee09-f5b7-4160-ac77-2a400c0f0854',
+  });
+
+  beamsClient.start()
+    .then(() => beamsClient.addDeviceInterest('hello'))
+    .then(() => console.log('Successfully registered and subscribed!'))
+    .catch(console.error);
+</script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

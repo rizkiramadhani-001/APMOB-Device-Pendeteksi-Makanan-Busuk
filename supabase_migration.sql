@@ -147,3 +147,63 @@ COMMIT;
 -- ==========================================
 -- END OF COMPLETE MIGRATION SCRIPT
 -- ==========================================
+
+-- ------------------------------------------
+-- Step 8: Create 'push_subscriptions' Table (Web Push)
+-- ------------------------------------------
+-- Stores standard Web Push VAPID subscriptions for user devices
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.push_subscriptions IS 'Stores Web Push notification subscriptions (VAPID) for browsers.';
+ALTER TABLE public.push_subscriptions DISABLE ROW LEVEL SECURITY;
+
+-- ------------------------------------------
+-- Step 9: Pusher Beams Postgres Trigger
+-- ------------------------------------------
+-- Sends an HTTP POST directly to Pusher Beams when spoiled food is inserted
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+CREATE OR REPLACE FUNCTION public.trigger_pusher_alert()
+RETURNS trigger AS $$
+DECLARE
+  payload jsonb;
+BEGIN
+  IF NEW.mq4 > 300 OR NEW.gas > 300 THEN
+    payload := '{
+      "interests": ["spoiled-food"],
+      "web": {
+        "notification": {
+          "title": "Food Spoilage Alert!",
+          "body": "High gas levels detected! Food might be spoiling."
+        }
+      },
+      "fcm": {
+        "notification": {
+          "title": "Food Spoilage Alert!",
+          "body": "High gas levels detected! Food might be spoiling."
+        }
+      }
+    }'::jsonb;
+    
+    perform net.http_post(
+      url:='https://0664ee09-f5b7-4160-ac77-2a400c0f0854.pushnotifications.pusher.com/publish_api/v1/instances/0664ee09-f5b7-4160-ac77-2a400c0f0854/publishes',
+      headers:='{"Content-Type": "application/json", "Authorization": "Bearer 6422F562EEB85422937DEC0142874E48306D0DDF21310E2DA4ACDAA1C10F3C25"}'::jsonb,
+      body:=payload
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_high_gas_insert ON public.sensor_history;
+CREATE TRIGGER on_high_gas_insert
+AFTER INSERT ON public.sensor_history
+FOR EACH ROW
+EXECUTE FUNCTION public.trigger_pusher_alert();
