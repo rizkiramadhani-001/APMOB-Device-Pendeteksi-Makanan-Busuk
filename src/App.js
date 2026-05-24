@@ -60,7 +60,7 @@ function Dashboard({ isDarkMode, setIsDarkMode }) {
 
 function MobileLayoutContainer({ children, isDarkMode }) {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#f5f5f7] to-[#e5e5ea] dark:from-[#000000] dark:to-[#0c0c0e] flex items-center justify-center p-0 font-sans selection:bg-cyan-500/30 transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-[100dvh] w-full bg-gradient-to-br from-[#f5f5f7] to-[#e5e5ea] dark:from-[#000000] dark:to-[#0c0c0e] flex items-center justify-center p-0 font-sans selection:bg-cyan-500/30 transition-colors duration-300 relative overflow-hidden">
       
       {/* Apple-Style Dynamic Fluid Wallpaper (Soft, elegant blurred circles in background for PC displays) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 hidden sm:block">
@@ -71,7 +71,7 @@ function MobileLayoutContainer({ children, isDarkMode }) {
       </div>
 
       {/* Clean Centered Mobile Column Layout (Apple Frosted Glass aesthetic, full height, border-x) */}
-      <div className="w-full h-screen sm:max-w-[420px] bg-slate-950 sm:backdrop-blur-3xl sm:border-x border-slate-200/40 dark:border-neutral-900/60 shadow-[0_0_80px_rgba(0,0,0,0.04)] dark:shadow-none flex flex-col relative overflow-hidden z-10 transition-all duration-300">
+      <div className="w-full h-[100dvh] sm:max-w-[420px] bg-slate-950 sm:backdrop-blur-3xl sm:border-x border-slate-200/40 dark:border-neutral-900/60 shadow-[0_0_80px_rgba(0,0,0,0.04)] dark:shadow-none flex flex-col relative overflow-hidden z-10 transition-all duration-300">
         
         {/* Persistent Photorealistic Kitchen Background Image for Dashboard & App */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">

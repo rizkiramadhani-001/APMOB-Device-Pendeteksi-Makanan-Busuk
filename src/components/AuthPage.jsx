@@ -55,7 +55,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between p-6 relative overflow-hidden select-none">
+    <div className="flex-1 flex flex-col justify-between p-6 relative overflow-y-auto select-none">
       
       {/* Background Image with Ken Burns zoom effect */}
       <div className="absolute inset-0 z-0 overflow-hidden bg-slate-900">

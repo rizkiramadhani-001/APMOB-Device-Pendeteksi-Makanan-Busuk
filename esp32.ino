@@ -274,7 +274,9 @@ class MyServerCallbacks : public BLEServerCallbacks {
 
   void onDisconnect(BLEServer *pServer) {
     deviceConnected = false;
-    Serial.println("BLE Client Disconnected");
+    Serial.println("BLE Client Disconnected. Restarting ESP32 to revert to Wi-Fi...");
+    delay(500); // Give the serial buffer a moment to transmit
+    ESP.restart();
   }
 };
 
@@ -502,29 +504,9 @@ void loop() {
   // Handle BLE Client Disconnect
   if (!deviceConnected && oldDeviceConnected) {
     oldDeviceConnected = deviceConnected; // Mark state immediately to prevent re-entry
-    Serial.println("BLE Client Disconnected. Re-enabling Wi-Fi with protective transitions...");
-    
-    // 1. Give BLE stack a moment to clean up and free radio buffers
-    delay(200);
-    
-    // 2. Safely re-initialize Wi-Fi STA mode
-    WiFi.mode(WIFI_STA);
-    WiFi.setAutoReconnect(false);
-    
-    // 3. Give Wi-Fi driver task time to initialize and allocate resources
-    delay(300);
-    
-    // 4. Safely restart BLE advertising
-    pServer->startAdvertising();
-    Serial.println("[BLE] Restarted Advertising.");
-    
-    // 5. Give BLE advertising task time to stabilize on the RF arbiter
-    delay(200);
-    
-    // 6. Schedule Wi-Fi auto-connect if credentials exist
-    if (wifiSSID.length() > 0) {
-      shouldConnectWifi = true;
-    }
+    Serial.println("BLE Client Disconnected in loop. Restarting ESP32 to revert to Wi-Fi...");
+    delay(500); // Give the serial buffer a moment to transmit
+    ESP.restart();
   }
 
   // Handle BLE Client Connect

@@ -23,7 +23,7 @@ export default function DeviceManager({ devices, connectToNewDevice, connectToSa
       <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none"></div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5 relative z-10">
-        <div className="flex items-center gap-2 min-w-[150px] flex-1">
+        <div className="flex items-center gap-2 min-w-[130px] sm:min-w-[150px] flex-1">
           {/* iOS Solid Icon Squircle backing */}
           <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-indigo-500 rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-cyan-500/10 text-white">
             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -76,7 +76,7 @@ export default function DeviceManager({ devices, connectToNewDevice, connectToSa
                 }`}
               >
                 {/* Left Side: Microchip Icon & Status Indicator */}
-                <div className="flex items-center gap-2.5 min-w-[150px] flex-1">
+                <div className="flex items-center gap-2.5 min-w-[130px] sm:min-w-[150px] flex-1">
                   {/* iOS Solid Icon Squircle in Row */}
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 shrink-0 ${
                     isActive

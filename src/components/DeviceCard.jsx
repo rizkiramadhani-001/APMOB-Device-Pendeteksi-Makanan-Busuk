@@ -70,7 +70,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
       
       {/* Device Header */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-left">
-        <div className="flex items-center gap-2.5 min-w-[160px] flex-1">
+        <div className="flex items-center gap-2.5 min-w-[130px] sm:min-w-[160px] flex-1">
           <div className="w-9 h-9 bg-gradient-to-br from-cyan-400 to-indigo-500 rounded-2xl flex items-center justify-center shadow-md shadow-cyan-500/10 text-white shrink-0">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
@@ -123,7 +123,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
       </div>
 
       {/* Freshness Health Gauge Banner (Apple Fitness Glass style) */}
-      <div className={`mb-5 rounded-[22px] border p-5 flex items-center justify-between gap-4 backdrop-blur-md transition-all duration-300 ${
+      <div className={`mb-5 rounded-[22px] border p-4 sm:p-5 flex items-center justify-between gap-2.5 sm:gap-4 backdrop-blur-md transition-all duration-300 ${
         freshness.bg
       } ${freshness.border} ${!isActive && 'opacity-75'}`}>
         
@@ -191,7 +191,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
           
           <button
             onClick={() => setShowWifiForm(!showWifiForm)}
-            className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-slate-100/40 dark:hover:bg-neutral-900/30 transition-colors"
+            className="w-full px-3 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between hover:bg-slate-100/40 dark:hover:bg-neutral-900/30 transition-colors"
           >
             <div className="flex items-center gap-3 text-left min-w-0">
               <div className="w-8 h-8 rounded-full bg-violet-500/10 dark:bg-violet-500/20 text-violet-500 flex items-center justify-center shrink-0">
@@ -236,7 +236,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
 
           {/* Collapsible Form */}
           {showWifiForm && (
-            <div className="px-4 pb-4 border-t border-slate-200/20 dark:border-neutral-800/40">
+            <div className="px-3 sm:px-4 pb-3.5 sm:pb-4 border-t border-slate-200/20 dark:border-neutral-800/40">
               <form onSubmit={handleSendWifi} className="flex flex-col gap-3 pt-3.5 text-left">
                 <div className="space-y-1">
                   <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">SSID Jaringan</label>
@@ -286,7 +286,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
       <div className={`flex flex-col gap-4 transition-all duration-300 ${!isActive ? 'opacity-90' : ''}`}>
         
         {/* Metric Row: MQ-4 Methane */}
-        <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-5 hover:border-emerald-500/35 dark:hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-4 text-left cursor-pointer">
+        <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-3.5 sm:p-5 hover:border-emerald-500/35 dark:hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 sm:gap-4 text-left cursor-pointer">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
               <div className="w-8 h-8 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -303,7 +303,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
           </div>
 
           {/* Minimal Area Trend Sparkline */}
-          <div className="h-[52px] w-[120px] shrink-0 overflow-hidden relative">
+          <div className="h-[52px] w-[90px] sm:w-[120px] shrink-0 overflow-hidden relative">
             {device.history && device.history.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={device.history} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
@@ -324,7 +324,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
         </div>
 
         {/* Metric Row: MQ-135 Air Quality */}
-        <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-5 hover:border-orange-500/35 dark:hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-4 text-left cursor-pointer">
+        <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-3.5 sm:p-5 hover:border-orange-500/35 dark:hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 sm:gap-4 text-left cursor-pointer">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
               <div className="w-8 h-8 rounded-full bg-orange-500/10 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
@@ -341,7 +341,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
           </div>
 
           {/* Minimal Area Trend Sparkline */}
-          <div className="h-[52px] w-[120px] shrink-0 overflow-hidden relative">
+          <div className="h-[52px] w-[90px] sm:w-[120px] shrink-0 overflow-hidden relative">
             {device.history && device.history.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={device.history} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
@@ -362,7 +362,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
         </div>
 
         {/* Metric Row: Humidity */}
-        <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-5 hover:border-blue-500/35 dark:hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-4 text-left cursor-pointer font-sans">
+        <div className="group rounded-[22px] bg-slate-100/50 dark:bg-black/50 border border-slate-200/50 dark:border-white/10 p-3.5 sm:p-5 hover:border-blue-500/35 dark:hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/[0.015] active:scale-[0.98] transition-all duration-200 flex items-center justify-between gap-2 sm:gap-4 text-left cursor-pointer font-sans">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
               <div className="w-8 h-8 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -379,7 +379,7 @@ export default function DeviceCard({ device, index, isDarkMode, disconnectDevice
           </div>
 
           {/* Minimal Area Trend Sparkline */}
-          <div className="h-[52px] w-[120px] shrink-0 overflow-hidden relative">
+          <div className="h-[52px] w-[90px] sm:w-[120px] shrink-0 overflow-hidden relative">
             {device.history && device.history.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={device.history} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>

@@ -41,7 +41,7 @@ export default function IntroPage({ onGetStarted }) {
   };
 
   return (
-    <div className="flex-1 w-full h-full relative overflow-hidden select-none flex flex-col justify-between p-6">
+    <div className="flex-1 w-full h-full relative overflow-y-auto select-none flex flex-col justify-between p-6">
       
       {/* Background Image with Ken Burns zoom effect */}
       <div className="absolute inset-0 z-0 overflow-hidden bg-slate-900">
@@ -129,7 +129,7 @@ export default function IntroPage({ onGetStarted }) {
         </div>
 
         {/* Big Bold Headline */}
-        <h2 className="text-[32px] font-display font-black text-white leading-[1.08] tracking-tight whitespace-pre-line animate-fade-in">
+        <h2 className="text-[26px] sm:text-[32px] font-display font-black text-white leading-[1.08] tracking-tight whitespace-pre-line animate-fade-in">
           {slides[currentSlide].title}
         </h2>
 
