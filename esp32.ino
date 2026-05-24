@@ -54,8 +54,8 @@ const unsigned long wifiReportInterval = 10000; // Sending interval (10 seconds)
 // =====================================
 // TELEMETRY GATEWAY CONFIGURATION
 // =====================================
-#define USE_LOCAL_GATEWAY false        // Set to true to use the local micro-server (recommended for stable local testing)
-const char* localGatewayUrl = "http://192.168.56.1:5001/api/telemetry"; // Change this to your PC's active IP address!
+#define USE_LOCAL_GATEWAY true        // Set to true to use the local micro-server (recommended for stable local testing)
+const char* localGatewayUrl = "http://13.229.95.116/api/telemetry"; // Change this to your PC's active IP address!
 
 // =====================================
 // SUPABASE REST API

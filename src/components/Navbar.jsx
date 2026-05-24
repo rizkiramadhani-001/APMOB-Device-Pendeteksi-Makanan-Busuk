@@ -7,14 +7,9 @@ export default function Navbar({ isDarkMode, setIsDarkMode, connectToNewDevice }
   return (
     <nav className="h-16 border-b border-slate-200/40 dark:border-white/10 bg-white/75 dark:bg-black/40 backdrop-blur-xl sticky top-0 z-40 shrink-0 select-none flex items-center justify-between px-4 sm:px-6 transition-all duration-300">
       {/* Brand Logo */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
-        <div className="w-7.5 h-7.5 sm:w-8.5 sm:h-8.5 rounded-xl bg-gradient-to-br from-cyan-400 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/15 animate-pulse-slow shrink-0">
-          <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <span className="font-display font-black text-xs sm:text-sm tracking-tight text-slate-800 dark:text-white truncate">
-          AquaAir<span className="text-gradient font-light">Dash</span>
+      <div className="flex items-center min-w-0">
+        <span className="font-display font-black text-sm sm:text-base tracking-tight text-slate-800 dark:text-white truncate select-none">
+          safe<span className="text-gradient font-light">dish</span>
         </span>
       </div>
 

@@ -55,28 +55,13 @@ export default function IntroPage({ onGetStarted }) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/95"></div>
       </div>
 
-      {/* Top Header: Navigation arrows & Slide indicators */}
+      {/* Top Header: Brand Typography & Slide indicators */}
       <div className="relative z-10 flex items-center justify-between pt-2">
-        {/* Left Side: Manual slide changers */}
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={prevSlide}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 border border-white/10 flex items-center justify-center text-white backdrop-blur-md transition-all"
-            aria-label="Previous slide"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button 
-            onClick={nextSlide}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 border border-white/10 flex items-center justify-center text-white backdrop-blur-md transition-all"
-            aria-label="Next slide"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+        {/* Left Side: Brand Typography */}
+        <div className="flex items-center">
+          <span className="font-display font-black text-base tracking-tight text-white select-none">
+            safe<span className="text-cyan-400 font-light">dish</span>
+          </span>
         </div>
 
         {/* Right Side: Page dots inside iOS pill */}
@@ -114,7 +99,7 @@ export default function IntroPage({ onGetStarted }) {
             />
           </div>
           <div className="text-left">
-            <span className="block text-[9px] font-bold text-cyan-300 uppercase tracking-widest leading-none">APMOB System</span>
+            <span className="block text-[9px] font-bold text-cyan-300 uppercase tracking-widest leading-none">safedish IoT</span>
             <span className="block text-xs font-black text-white mt-0.5 leading-none">{slides[currentSlide].badge}</span>
           </div>
         </div>

@@ -82,13 +82,8 @@ export default function AuthPage() {
 
       {/* Brand Header */}
       <div className="pt-6 text-center z-10">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-indigo-600 shadow-lg shadow-cyan-500/25 mb-5 animate-pulse-slow">
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <h1 className="text-xl font-display font-black text-white tracking-tight">
-          AquaAir<span className="text-cyan-400 font-light">Dash</span>
+        <h1 className="text-2xl font-display font-black text-white tracking-tight select-none">
+          safe<span className="text-cyan-400 font-light">dish</span>
         </h1>
         <p className="text-[10px] text-cyan-300 uppercase tracking-widest font-black leading-none mt-1.5">Sistem Deteksi Pembusukan Makanan</p>
       </div>
@@ -249,7 +244,7 @@ export default function AuthPage() {
         </div>
         
         <p className="text-slate-300 text-xs leading-relaxed mb-5 font-semibold">
-          Modul detektor makanan AquaAir dilengkapi sensor presisi tinggi untuk menganalisis laju dekomposisi organik:
+          Modul detektor makanan safedish dilengkapi sensor presisi tinggi untuk menganalisis laju dekomposisi organik:
         </p>
 
         <div className="space-y-4">
