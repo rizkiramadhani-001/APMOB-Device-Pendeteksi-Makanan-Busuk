@@ -250,90 +250,108 @@ export function useBluetooth(userId) {
       executeNativePush(`disc-${deviceId}`, 'Sensor Disconnected', `${deviceName} lost connection.`, nativePushTimes);
     });
 
-    const server = await device.gatt.connect();
-    updateDevice(deviceId, { status: "Getting Service..." });
-
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    updateDevice(deviceId, { status: "Getting Characteristic..." });
-
-    const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-    deviceRefs.current.get(deviceId).characteristic = characteristic;
-
-    updateDevice(deviceId, { status: "Connected", isConnected: true });
-    toast.success(`Successfully connected to ${deviceName}`, { id: `success-${deviceId}` });
-    
-    // Save to DB on successful connect
-    saveDeviceToDB(deviceId, deviceName);
-
-    // Discover WiFi characteristics
     try {
-      const wifiChar = await service.getCharacteristic(WIFI_CHARACTERISTIC_UUID);
-      deviceRefs.current.get(deviceId).wifiCharacteristic = wifiChar;
+      const server = await device.gatt.connect();
+      updateDevice(deviceId, { status: "Getting Service..." });
 
-      const wifiStatusChar = await service.getCharacteristic(WIFI_STATUS_CHARACTERISTIC_UUID);
-      await wifiStatusChar.startNotifications();
-      wifiStatusChar.addEventListener('characteristicvaluechanged', (event) => {
-        const statusStr = new TextDecoder('utf-8').decode(event.target.value);
-        // Parse: "CONNECTED:192.168.1.x:MySSID" or "DISCONNECTED:MySSID" or "CONNECTING" or "NOT_CONFIGURED"
-        const parts = statusStr.split(':');
-        const wifiState = parts[0];
-        let wifiInfo = { status: wifiState, ip: '', ssid: '' };
-        if (wifiState === 'CONNECTED') {
-          wifiInfo.ip = parts[1] || '';
-          wifiInfo.ssid = parts[2] || '';
-        } else if (wifiState === 'DISCONNECTED') {
-          wifiInfo.ssid = parts[1] || '';
-        }
-        updateDevice(deviceId, { wifiStatus: wifiInfo });
-      });
+      const service = await server.getPrimaryService(SERVICE_UUID);
+      updateDevice(deviceId, { status: "Getting Characteristic..." });
 
-      // Read initial status
-      const initialVal = await wifiStatusChar.readValue();
-      const initialStr = new TextDecoder('utf-8').decode(initialVal);
-      if (initialStr) {
-        const parts = initialStr.split(':');
-        const wifiState = parts[0];
-        let wifiInfo = { status: wifiState, ip: '', ssid: '' };
-        if (wifiState === 'CONNECTED') {
-          wifiInfo.ip = parts[1] || '';
-          wifiInfo.ssid = parts[2] || '';
-        } else if (wifiState === 'DISCONNECTED') {
-          wifiInfo.ssid = parts[1] || '';
-        }
-        updateDevice(deviceId, { wifiStatus: wifiInfo });
-      }
-    } catch (e) {
-      console.warn("WiFi characteristics not available on this device", e);
-    }
+      const characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+      deviceRefs.current.get(deviceId).characteristic = characteristic;
 
-    try {
-      await characteristic.startNotifications();
-      characteristic.addEventListener('characteristicvaluechanged', (event) => {
-        const dataView = event.target.value;
-        const decoder = new TextDecoder('utf-8');
-        const decoded = decoder.decode(dataView);
+      updateDevice(deviceId, { status: "Connected", isConnected: true });
+      toast.success(`Successfully connected to ${deviceName}`, { id: `success-${deviceId}` });
+      
+      // Save to DB on successful connect
+      saveDeviceToDB(deviceId, deviceName);
 
-        const parsedSensorData = parseDataString(decoded);
+      // Discover WiFi characteristics
+      try {
+        const wifiChar = await service.getCharacteristic(WIFI_CHARACTERISTIC_UUID);
+        deviceRefs.current.get(deviceId).wifiCharacteristic = wifiChar;
 
-        updateDevice(deviceId, (d) => {
-          const newPoint = {
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            mq4: !isNaN(parseFloat(parsedSensorData.mq4)) ? parseFloat(parsedSensorData.mq4) : 0,
-            mq135: !isNaN(parseFloat(parsedSensorData.mq135)) ? parseFloat(parsedSensorData.mq135) : 0,
-            humidity: !isNaN(parseFloat(parsedSensorData.humidity)) ? parseFloat(parsedSensorData.humidity) : 0,
-          };
-          return {
-            readValue: decoded,
-            sensorData: parsedSensorData,
-            history: [...(d.history || []), newPoint].slice(-25)
-          };
+        const wifiStatusChar = await service.getCharacteristic(WIFI_STATUS_CHARACTERISTIC_UUID);
+        await wifiStatusChar.startNotifications();
+        wifiStatusChar.addEventListener('characteristicvaluechanged', (event) => {
+          const statusStr = new TextDecoder('utf-8').decode(event.target.value);
+          // Parse: "CONNECTED:192.168.1.x:MySSID" or "DISCONNECTED:MySSID" or "CONNECTING" or "NOT_CONFIGURED"
+          const parts = statusStr.split(':');
+          const wifiState = parts[0];
+          let wifiInfo = { status: wifiState, ip: '', ssid: '' };
+          if (wifiState === 'CONNECTED') {
+            wifiInfo.ip = parts[1] || '';
+            wifiInfo.ssid = parts[2] || '';
+          } else if (wifiState === 'DISCONNECTED') {
+            wifiInfo.ssid = parts[1] || '';
+          }
+          updateDevice(deviceId, { wifiStatus: wifiInfo });
         });
 
-        checkAlertsAndHistory(deviceId, deviceName, parsedSensorData);
+        // Read initial status
+        const initialVal = await wifiStatusChar.readValue();
+        const initialStr = new TextDecoder('utf-8').decode(initialVal);
+        if (initialStr) {
+          const parts = initialStr.split(':');
+          const wifiState = parts[0];
+          let wifiInfo = { status: wifiState, ip: '', ssid: '' };
+          if (wifiState === 'CONNECTED') {
+            wifiInfo.ip = parts[1] || '';
+            wifiInfo.ssid = parts[2] || '';
+          } else if (wifiState === 'DISCONNECTED') {
+            wifiInfo.ssid = parts[1] || '';
+          }
+          updateDevice(deviceId, { wifiStatus: wifiInfo });
+        }
+      } catch (e) {
+        console.warn("WiFi characteristics not available on this device", e);
+      }
+
+      try {
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', (event) => {
+          const dataView = event.target.value;
+          const decoder = new TextDecoder('utf-8');
+          const decoded = decoder.decode(dataView);
+
+          const parsedSensorData = parseDataString(decoded);
+
+          updateDevice(deviceId, (d) => {
+            const newPoint = {
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              mq4: !isNaN(parseFloat(parsedSensorData.mq4)) ? parseFloat(parsedSensorData.mq4) : 0,
+              mq135: !isNaN(parseFloat(parsedSensorData.mq135)) ? parseFloat(parsedSensorData.mq135) : 0,
+              humidity: !isNaN(parseFloat(parsedSensorData.humidity)) ? parseFloat(parsedSensorData.humidity) : 0,
+            };
+            return {
+              readValue: decoded,
+              sensorData: parsedSensorData,
+              history: [...(d.history || []), newPoint].slice(-25)
+            };
+          });
+
+          checkAlertsAndHistory(deviceId, deviceName, parsedSensorData);
+        });
+        updateDevice(deviceId, { status: "Live Monitoring Active" });
+      } catch (e) {
+        console.warn("Notifications not supported, fallback to manual");
+      }
+    } catch (error) {
+      console.error("GATT Connection/Discovery failed!", error);
+      updateDevice(deviceId, {
+        status: "Offline",
+        isConnected: false,
+        readValue: "--",
+        sensorData: { mq4: '--', mq135: '--', humidity: '--' }
       });
-      updateDevice(deviceId, { status: "Live Monitoring Active" });
-    } catch (e) {
-      console.warn("Notifications not supported, fallback to manual");
+      toast.error(`Koneksi gagal: ${error.message || error}`, { id: `gatt-err-${deviceId}` });
+      if (device && device.gatt && device.gatt.connected) {
+        try {
+          device.gatt.disconnect();
+        } catch (discErr) {
+          console.error("Failed to disconnect GATT cleanly:", discErr);
+        }
+      }
     }
   };
 

@@ -5,11 +5,11 @@ const PORT = 5001;
 const SUPABASE_URL = 'hijdrgyysmurhahdavtu.supabase.co';
 const SUPABASE_PATH = '/rest/v1/sensor_history';
 const SUPABASE_KEY = 
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpamRy"
-    "Z3l5c211cmhhaGRhdnR1Iiwicm9sZSI6InNlcnZp"
-    "Y2Vfcm9sZSIsImlhdCI6MTc3NTczMDQwMCwiZXhw"
-    "IjoyMDkxMzA2NDAwfQ.WdtSLpE3WCpt0md9eDtls"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpamRy" +
+    "Z3l5c211cmhhaGRhdnR1Iiwicm9sZSI6InNlcnZp" +
+    "Y2Vfcm9sZSIsImlhdCI6MTc3NTczMDQwMCwiZXhw" +
+    "IjoyMDkxMzA2NDAwfQ.WdtSLpE3WCpt0md9eDtls" +
     "S0Xa3PPGCjqJ3yBfHGhpuM";
 
 const server = http.createServer((req, res) => {
@@ -86,8 +86,18 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Status] Listening on local port: ${PORT}`);
   console.log(`[Info] No NPM installation is required! This is a zero-dependency server.`);
   console.log(`[How to run] Execute: node server.js`);
-  console.log(`[Local IP] To find your PC's IP address, open your Command Prompt and type: ipconfig`);
+  console.log(`[Local IP] To find your PC's IP address:`);
+  console.log(`           1. Open Windows Command Prompt (cmd) or PowerShell.`);
+  console.log(`           2. Run the command: ipconfig`);
+  console.log(`           3. Look for "IPv4 Address" under your active connection (Wi-Fi).`);
+  console.log(`              (Example: 192.168.1.50)`);
   console.log(`[ESP32 Target] Tell your ESP32 to make plain HTTP POST requests to:`);
   console.log(`               http://<YOUR_PC_IP>:${PORT}/api/telemetry`);
+  console.log(`[Firewall Note] If the ESP32 says connection refused / failed, you must`);
+  console.log(`                allow port ${PORT} through Windows Defender Firewall:`);
+  console.log(`                1. Open "Windows Defender Firewall with Advanced Security".`);
+  console.log(`                2. Click "Inbound Rules" -> "New Rule...".`);
+  console.log(`                3. Choose "Port" -> TCP -> Specific local ports: ${PORT}`);
+  console.log(`                4. Select "Allow the connection" -> Next -> Name: "APMOB Port ${PORT}".`);
   console.log(`=============================================================`);
 });

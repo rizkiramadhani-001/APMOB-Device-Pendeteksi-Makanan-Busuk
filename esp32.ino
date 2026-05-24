@@ -52,6 +52,12 @@ unsigned long lastWifiReportTime = 0;
 const unsigned long wifiReportInterval = 10000; // Sending interval (10 seconds)
 
 // =====================================
+// TELEMETRY GATEWAY CONFIGURATION
+// =====================================
+#define USE_LOCAL_GATEWAY false        // Set to true to use the local micro-server (recommended for stable local testing)
+const char* localGatewayUrl = "http://192.168.56.1:5001/api/telemetry"; // Change this to your PC's active IP address!
+
+// =====================================
 // SUPABASE REST API
 // =====================================
 String supabaseUrl = "https://hijdrgyysmurhahdavtu.supabase.co/rest/v1/sensor_history";
@@ -325,40 +331,85 @@ void sendDataToSupabase() {
   Serial.println("Constructing JSON Payload:");
   Serial.println(jsonPayload);
 
-  HTTPClient http;
-  http.useHTTP10(true);
-  http.setTimeout(15000);
+  if (USE_LOCAL_GATEWAY) {
+    // =====================================
+    // LIGHTWEIGHT PLAIN HTTP GATEWAY
+    // =====================================
+    WiFiClient plainClient;
+    HTTPClient http;
+    http.useHTTP10(true);
+    http.setTimeout(10000);
 
-  Serial.println("Opening SSL socket session...");
-  bool ok = http.begin(client, supabaseUrl);
-  
-  if (!ok) {
-    Serial.println("HTTP secure session initialization failed!");
-    return;
+    Serial.print("[HTTP Gateway] Connecting to: ");
+    Serial.println(localGatewayUrl);
+
+    bool ok = http.begin(plainClient, localGatewayUrl);
+    
+    if (!ok) {
+      Serial.println("[HTTP Gateway] Initialization failed!");
+      plainClient.stop();
+      return;
+    }
+
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("Connection", "close");
+
+    Serial.println("Sending plain HTTP payload...");
+    int httpCode = http.POST(jsonPayload);
+
+    Serial.print("[HTTP Gateway] Response Code: ");
+    Serial.println(httpCode);
+
+    if (httpCode >= 200 && httpCode < 300) {
+      Serial.println("--- GATEWAY POST SUCCESS ---");
+    } else {
+      Serial.print("--- GATEWAY POST FAILED: ");
+      Serial.println(http.errorToString(httpCode));
+    }
+
+    http.end();
+    plainClient.stop(); // Force-release socket memory immediately
+  } 
+  else {
+    // =====================================
+    // ROBUST DIRECT HTTPS (SUPABASE)
+    // =====================================
+    HTTPClient http;
+    http.useHTTP10(true);
+    http.setTimeout(15000);
+
+    Serial.println("Opening SSL socket session...");
+    bool ok = http.begin(client, supabaseUrl);
+    
+    if (!ok) {
+      Serial.println("HTTP secure session initialization failed!");
+      return;
+    }
+
+    // Add Request Headers
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("apikey", supabaseKey);
+    http.addHeader("Authorization", "Bearer " + supabaseKey);
+    http.addHeader("Prefer", "return=minimal"); // Request a zero-byte response to bypass dynamic heap buffer allocations
+    http.addHeader("Connection", "close"); // Force connection closure to prevent socket exhaustion
+
+    // Post Data
+    Serial.println("Sending HTTPS payload...");
+    int httpCode = http.POST(jsonPayload);
+
+    Serial.print("HTTP Response Code: ");
+    Serial.println(httpCode);
+
+    if (httpCode > 0) {
+      Serial.println("--- DB POST SUCCESS ---");
+    } else {
+      Serial.print("--- DB POST FAILED: ");
+      Serial.println(http.errorToString(httpCode));
+    }
+
+    http.end();
+    client.stop(); // Force-release secure SSL context memory buffers immediately
   }
-
-  // Add Request Headers
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("apikey", supabaseKey);
-  http.addHeader("Authorization", "Bearer " + supabaseKey);
-  http.addHeader("Prefer", "return=minimal"); // Request a zero-byte response to bypass dynamic heap buffer allocations
-
-  // Post Data
-  Serial.println("Sending HTTPS payload...");
-  int httpCode = http.POST(jsonPayload);
-
-  Serial.print("HTTP Response Code: ");
-  Serial.println(httpCode);
-
-  if (httpCode > 0) {
-    Serial.println("--- DB POST SUCCESS ---");
-  } else {
-    Serial.print("--- DB POST FAILED: ");
-    Serial.println(http.errorToString(httpCode));
-  }
-
-  http.end();
-  client.stop(); // Force-release secure SSL context memory buffers immediately
   Serial.println("-------------------------------------\n");
 }
 
